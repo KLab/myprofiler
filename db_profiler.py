@@ -6,6 +6,7 @@ from __future__ import print_function
 import os
 import sys
 import re
+import functools
 from time import sleep
 from collections import defaultdict
 from ConfigParser import SafeConfigParser
@@ -90,35 +91,44 @@ def build_option_parser():
     return parser
 
 
+def show_summary(counter, limit, file=sys.stdout):
+    p = functools.partial(print, file=file)
+    p('---')
+    items = counter.items()
+    items.sort(key=lambda x: x[1], reverse=True)
+    for query, count in items[:limit]:
+        p("{0:4d} {1}".format(count, query))
+
 def main():
     parser = build_option_parser()
     opts, args = parser.parse_args()
 
-    outfile = None
-    if opts.out:
-        outfile = open(opts.out, "w")
-
     try:
+        outfile = None
+        if opts.out:
+            outfile = open(opts.out, "w")
+
         con = connect(opts.config, opts.section)
     except Exception as e:
         parser.error(e)
 
     counter = defaultdict(int)
-    while True:
-        for row in gather_infos(con):
-            if row == CMD_PROCESSLIST:
-                continue
-            counter[normalize_query(row)] += 1
-            if outfile:
-                print(row, file=outfile)
+    try:
+        while True:
+            for row in gather_infos(con):
+                if row == CMD_PROCESSLIST:
+                    continue
+                counter[normalize_query(row)] += 1
+                if outfile:
+                    print(row, file=outfile)
 
-        print('---')
-        items = counter.items()
-        items.sort(key=lambda x: x[1], reverse=True)
-        for query, count in items[:opts.num_summary]:
-            print("{0:4d} {1}".format(count, query))
-        print()
-        sleep(opts.interval)
+            show_summary(counter, opts.num_summary)
+            print()
+            sleep(opts.interval)
+    finally:
+        if outfile:
+            print("\nSummary", file=outfile)
+            show_summary(counter, opts.num_summary, outfile)
 
 
 if __name__ == '__main__':
