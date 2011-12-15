@@ -12,8 +12,13 @@ from collections import defaultdict
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser
 
-import MySQLdb  # MySQL-python
-#import pymysql as MySQLdb  # PyMySQL
+try:
+    import MySQLdb  # MySQL-python
+except ImportError:
+    import pymysql as MySQLdb  # PyMySQL
+except ImportError:
+    print "Please install MySQLdb or PyMySQL"
+    sys.exit(1)
 
 
 CMD_PROCESSLIST = "show full processlist"
