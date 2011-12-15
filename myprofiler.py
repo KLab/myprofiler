@@ -17,10 +17,11 @@ from optparse import OptionParser
 try:
     import MySQLdb  # MySQL-python
 except ImportError:
-    import pymysql as MySQLdb  # PyMySQL
-except ImportError:
-    print "Please install MySQLdb or PyMySQL"
-    sys.exit(1)
+    try:
+        import pymysql as MySQLdb  # PyMySQL
+    except ImportError:
+        print "Please install MySQLdb or PyMySQL"
+        sys.exit(1)
 
 
 CMD_PROCESSLIST = "show full processlist"
