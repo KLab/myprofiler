@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+"""myprofiler - Casual MySQL Profiler
+
+https://github.com/methane/myprofiler
+"""
+
 from __future__ import print_function
 
 import os
@@ -25,10 +30,9 @@ CMD_PROCESSLIST = "show full processlist"
 
 
 def connect(conf='~/.my.cnf', section='DEFAULT'):
-    u"""
-    ~/.my.cnf から接続に必要な情報を読み込む.
     """
-    #parser = SafeConfigParser(allow_no_value=True)
+    connect to MySQL from conf file.
+    """
     parser = SafeConfigParser()
     parser.read([os.path.expanduser(conf)])
 
@@ -41,7 +45,7 @@ def connect(conf='~/.my.cnf', section='DEFAULT'):
         return MySQLdb.connect(host=host, user=user, passwd=password)
 
 
-def gather_infos(con):
+def processlist(con):
     con.query(CMD_PROCESSLIST)
     for row in con.store_result().fetch_row(maxrows=200, how=1):
         if row['Info']:
@@ -49,8 +53,8 @@ def gather_infos(con):
 
 
 def normalize_query(row):
-    u"""
-    クエリを種類ごとに集計するために変形する.
+    """
+    Modify query to summarize.
     """
     row = ' '.join(row.split())
     subs = [
@@ -104,6 +108,7 @@ def show_summary(counter, limit, file=sys.stdout):
     for query, count in items[:limit]:
         p("{0:4d} {1}".format(count, query))
 
+
 def main():
     parser = build_option_parser()
     opts, args = parser.parse_args()
@@ -112,15 +117,14 @@ def main():
         outfile = None
         if opts.out:
             outfile = open(opts.out, "w")
-
         con = connect(opts.config, opts.section)
-    except Exception as e:
+    except Exception, e:
         parser.error(e)
 
     counter = defaultdict(int)
     try:
         while True:
-            for row in gather_infos(con):
+            for row in processlist(con):
                 if row == CMD_PROCESSLIST:
                     continue
                 counter[normalize_query(row)] += 1
