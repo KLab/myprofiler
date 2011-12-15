@@ -6,12 +6,9 @@
 https://github.com/methane/myprofiler
 """
 
-from __future__ import print_function
-
 import os
 import sys
 import re
-import functools
 from time import sleep
 from collections import defaultdict
 from ConfigParser import SafeConfigParser
@@ -101,12 +98,11 @@ def build_option_parser():
 
 
 def show_summary(counter, limit, file=sys.stdout):
-    p = functools.partial(print, file=file)
-    p('---')
+    print >>file, '---'
     items = counter.items()
     items.sort(key=lambda x: x[1], reverse=True)
     for query, count in items[:limit]:
-        p("{0:4d} {1}".format(count, query))
+        print >>file, "%4d %s" % (count, query)
 
 
 def main():
@@ -129,14 +125,14 @@ def main():
                     continue
                 counter[normalize_query(row)] += 1
                 if outfile:
-                    print(row, file=outfile)
+                    print >>outfile, row
 
             show_summary(counter, opts.num_summary)
-            print()
+            print
             sleep(opts.interval)
     finally:
         if outfile:
-            print("\nSummary", file=outfile)
+            print >>outfile, "\nSummary"
             show_summary(counter, opts.num_summary, outfile)
 
 
