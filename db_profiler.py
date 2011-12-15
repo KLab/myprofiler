@@ -81,6 +81,11 @@ def build_option_parser():
             help="show most K common queries.",
             type="int", default=10
             )
+    parser.add_option(
+            '-i', '--interval',
+            help="Interval of executing show processlist",
+            type="float", default=1.0
+            )
     return parser
 
 
@@ -108,7 +113,7 @@ def main():
         for query, count in items[:opts.num_summary]:
             print("{1:4d} {2}".format(count, query))
         print()
-        sleep(1)
+        sleep(opts.interval)
 
 
 if __name__ == '__main__':
