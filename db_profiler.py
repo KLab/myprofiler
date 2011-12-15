@@ -29,9 +29,10 @@ def connect(conf='~/.my.cnf', section='DEFAULT'):
     host = parser.get(section, 'host')
     user = parser.get(section, 'user')
     password = parser.get(section, 'password')
-    #port = parser.getint(section, 'port')
-    #return MySQLdb.connect(host=host, user=user, passwd=password, port=port)
-    return MySQLdb.connect(host=host, user=user, passwd=password)
+    if parser.has_option(section, 'port'):
+        return MySQLdb.connect(host=host, user=user, passwd=password, port=port)
+    else:
+        return MySQLdb.connect(host=host, user=user, passwd=password)
 
 
 def gather_infos(con):
@@ -64,39 +65,43 @@ def build_option_parser():
     parser = OptionParser()
     parser.add_option(
             '-o', '--out',
-            help="write raw queries to this file."
+            help="write raw queries to this file.",
             )
     parser.add_option(
             '-c', '--config',
-            help="read MySQL configuration instead of ~/.my.cnf",
+            help="read MySQL configuration from. (default: '~/.my.cnf'",
             default='~/.my.cnf'
             )
     parser.add_option(
             '-s', '--section',
-            help="read MySQL configuration from this section.",
+            help="read MySQL configuration from this section. (default: '[DEFAULT]')",
             default="DEFAULT"
             )
     parser.add_option(
             '-n', '--num-summary', metavar="K",
-            help="show most K common queries.",
+            help="show most K common queries. (default: 10)",
             type="int", default=10
             )
     parser.add_option(
             '-i', '--interval',
-            help="Interval of executing show processlist",
+            help="Interval of executing show processlist [sec] (default: 1.0)",
             type="float", default=1.0
             )
     return parser
 
 
 def main():
-    opts, args = build_option_parser().parse_args()
+    parser = build_option_parser()
+    opts, args = parser.parse_args()
 
     outfile = None
     if opts.out:
         outfile = open(opts.out, "w")
 
-    con = connect(opts.config, opts.section)
+    try:
+        con = connect(opts.config, opts.section)
+    except Exception as e:
+        parser.error(e)
 
     counter = defaultdict(int)
     while True:
@@ -111,7 +116,7 @@ def main():
         items = counter.items()
         items.sort(key=lambda x: x[1], reverse=True)
         for query, count in items[:opts.num_summary]:
-            print("{1:4d} {2}".format(count, query))
+            print("{0:4d} {1}".format(count, query))
         print()
         sleep(opts.interval)
 
