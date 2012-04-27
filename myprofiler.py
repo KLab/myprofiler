@@ -16,9 +16,11 @@ from optparse import OptionParser
 
 try:
     import MySQLdb  # MySQL-python
+    from MySQLdb.cursors import DictCursor
 except ImportError:
     try:
         import pymysql as MySQLdb  # PyMySQL
+        from pymysql.cursors import DictCursor
     except ImportError:
         print "Please install MySQLdb or PyMySQL"
         sys.exit(1)
@@ -34,18 +36,20 @@ def connect(conf='~/.my.cnf', section='DEFAULT'):
     parser = SafeConfigParser()
     parser.read([os.path.expanduser(conf)])
 
-    host = parser.get(section, 'host')
-    user = parser.get(section, 'user')
-    password = parser.get(section, 'password')
+    args = {}
+
+    args['host'] = parser.get(section, 'host')
+    args['user'] = parser.get(section, 'user')
+    args['passwd'] = parser.get(section, 'password')
     if parser.has_option(section, 'port'):
-        return MySQLdb.connect(host=host, user=user, passwd=password, port=port)
-    else:
-        return MySQLdb.connect(host=host, user=user, passwd=password)
+        args['port'] = int(parser.get(section, 'port'))
+    return MySQLdb.connect(**args)
 
 
 def processlist(con):
-    con.query(CMD_PROCESSLIST)
-    for row in con.store_result().fetch_row(maxrows=200, how=1):
+    cur = con.cursor(DictCursor)
+    cur.execute(CMD_PROCESSLIST)
+    for row in cur.fetchall():
         if row['Info']:
             yield row['Info']
 
