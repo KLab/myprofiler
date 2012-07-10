@@ -41,6 +41,7 @@ def connect(conf='~/.my.cnf', section='DEFAULT'):
     args['host'] = parser.get(section, 'host')
     args['user'] = parser.get(section, 'user')
     args['passwd'] = parser.get(section, 'password')
+    args['charset'] = 'utf8'
     if parser.has_option(section, 'port'):
         args['port'] = int(parser.get(section, 'port'))
     return MySQLdb.connect(**args)
