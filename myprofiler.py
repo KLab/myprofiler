@@ -61,7 +61,7 @@ def normalize_query(row):
     """
     row = ' '.join(row.split())
     subs = [
-            (r"\b\d+\b", "N"),
+            (r"[+\-]{0,1}\b\d+\b", "N"),
             (r"\b0x[0-9A-Fa-f]+\b", "0xN"),
             (r"(\\')", ''),
             (r'(\\")', ''),
