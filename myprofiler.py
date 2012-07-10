@@ -3,7 +3,7 @@
 
 """myprofiler - Casual MySQL Profiler
 
-https://github.com/methane/myprofiler
+https://github.com/KLab/myprofiler
 """
 
 import os
