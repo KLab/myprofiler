@@ -85,7 +85,7 @@ def read_mycnf(extra_file=None, group_suffix=''):
 
 
 def build_option_parser():
-    parser = OptionParser()
+    parser = OptionParser(add_help_option=False)
     parser.add_option(
             '-o', '--out',
             help="Write raw queries to this file.",
@@ -110,6 +110,8 @@ def build_option_parser():
             )
     parser.add_option('-u', '--user')
     parser.add_option('-p', '--password')
+    parser.add_option('-h', '--host')
+    parser.add_option('-?', '--help',action="store_true", help="show this message")
     return parser
 
 
@@ -126,12 +128,18 @@ def main():
     opts, args = parser.parse_args()
     outfile = None
 
+    if opts.help:
+        parser.print_help()
+        return
+
     try:
         cnf = read_mycnf(opts.extra_file, opts.group_suffix)
         if opts.user:
             cnf['user'] = opts.user
         if opts.password:
             cnf['password'] = opts.password
+        if opts.host:
+            cnf['host'] = opts.host
         con = connect(cnf)
 
         if opts.out:
