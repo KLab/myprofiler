@@ -1,14 +1,13 @@
-[spamegg]
+[client_spamegg]
 host=spameggdb
 database=spamegg
 user=spam_user
 password=secret
 
 
-[spamegg-slave]
+[client_spamegg-slave]
 host=spameggdb-slave
 database=spamegg
 user=spam_user
 password=secret
-
 
