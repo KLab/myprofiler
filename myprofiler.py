@@ -29,21 +29,14 @@ except ImportError:
 CMD_PROCESSLIST = "show full processlist"
 
 
-def connect(conf='~/.my.cnf', section='client'):
-    """
-    connect to MySQL from conf file.
-    """
-    parser = SafeConfigParser()
-    parser.read([os.path.expanduser(conf)])
-
+def connect(cnf):
     args = {}
-
-    args['host'] = parser.get(section, 'host')
-    args['user'] = parser.get(section, 'user')
-    args['passwd'] = parser.get(section, 'password')
-    args['charset'] = 'utf8'
-    if parser.has_option(section, 'port'):
-        args['port'] = int(parser.get(section, 'port'))
+    args['host'] = cnf.get('host', 'localhost')
+    args['user'] = cnf.get('user', '')
+    args['passwd'] = cnf.get('password', '')
+    args['charset'] = cnf.get('default-character-set', 'utf8')
+    if 'port' in cnf:
+        args['port'] = int(get('port'))
     return MySQLdb.connect(**args)
 
 
@@ -74,21 +67,36 @@ def normalize_query(row):
     return row
 
 
+def read_mycnf(extra_file=None, group_suffix=''):
+    cnf_files = [os.path.expanduser('~/.my.cnf')]
+    if extra_file is not None:
+        if not os.path.isfile(extra_file):
+            print >>sys.stderr, "[warn]", extra_file, "is not exists."
+        else:
+            cnf_files += [extra_file]
+
+    parser = SafeConfigParser()
+    parser.read(cnf_files)
+
+    cnf = dict(parser.items('client'))
+    if group_suffix:
+        cnf.update(parser.items('client' + group_suffix))
+    return cnf
+
+
 def build_option_parser():
     parser = OptionParser()
     parser.add_option(
             '-o', '--out',
-            help="write raw queries to this file.",
+            help="Write raw queries to this file.",
             )
     parser.add_option(
-            '-c', '--config',
-            help="read MySQL configuration from. (default: '~/.my.cnf'",
-            default='~/.my.cnf'
+            '-e', '--defaults-extra-file', dest='extra_file',
+            help="Read MySQL configuration from this file additionaly",
             )
     parser.add_option(
-            '-s', '--section',
-            help="read MySQL configuration from this section. (default: '[DEFAULT]')",
-            default="DEFAULT"
+            '-s', '--defaults-group-suffix', dest='group_suffix',
+            help="Read MySQL configuration from this section additionally",
             )
     parser.add_option(
             '-n', '--num-summary', metavar="K",
@@ -100,6 +108,8 @@ def build_option_parser():
             help="Interval of executing show processlist [sec] (default: 1.0)",
             type="float", default=1.0
             )
+    parser.add_option('-u', '--user')
+    parser.add_option('-p', '--password')
     return parser
 
 
@@ -114,12 +124,18 @@ def show_summary(counter, limit, file=sys.stdout):
 def main():
     parser = build_option_parser()
     opts, args = parser.parse_args()
+    outfile = None
 
     try:
-        outfile = None
+        cnf = read_mycnf(opts.extra_file, opts.group_suffix)
+        if opts.user:
+            cnf['user'] = opts.user
+        if opts.password:
+            cnf['password'] = opts.password
+        con = connect(cnf)
+
         if opts.out:
             outfile = open(opts.out, "w")
-        con = connect(opts.config, opts.section)
     except Exception, e:
         parser.error(e)
 
@@ -140,6 +156,7 @@ def main():
         if outfile:
             print >>outfile, "\nSummary"
             show_summary(counter, opts.num_summary, outfile)
+            outfile.close()
 
 
 if __name__ == '__main__':
