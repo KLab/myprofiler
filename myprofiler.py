@@ -29,7 +29,7 @@ except ImportError:
 CMD_PROCESSLIST = "show full processlist"
 
 
-def connect(conf='~/.my.cnf', section='DEFAULT'):
+def connect(conf='~/.my.cnf', section='client'):
     """
     connect to MySQL from conf file.
     """
