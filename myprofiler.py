@@ -26,6 +26,21 @@ except ImportError:
         sys.exit(1)
 
 
+class NoValueConfigParser(SafeConfigParser):
+    """
+    ConfigParser accepts no value.
+    """
+    OPTCRE = re.compile(
+        r'(?P<option>[^:=\s][^:=]*)'          # very permissive!
+        r'\s*'                                # any number of space/tab,
+        r'(?P<vi>[:=]?)\s*'                   # optionally followed by
+                                              # separator (either : or
+                                              # =), followed by any #
+                                              # space/tab
+        r'(?P<value>.*)$'                     # everything up to eol
+        )
+
+
 CMD_PROCESSLIST = "show full processlist"
 
 
@@ -75,7 +90,7 @@ def read_mycnf(extra_file=None, group_suffix=''):
         else:
             cnf_files += [extra_file]
 
-    parser = SafeConfigParser()
+    parser = NoValueConfigParser()
     parser.read(cnf_files)
 
     cnf = dict(parser.items('client'))
