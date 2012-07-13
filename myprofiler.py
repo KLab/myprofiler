@@ -83,12 +83,14 @@ def normalize_query(row):
 
 
 def read_mycnf(extra_file=None, group_suffix=''):
-    cnf_files = [os.path.expanduser('~/.my.cnf')]
+    cnf_files = ['/etc/my.cnf']
     if extra_file is not None:
         if not os.path.isfile(extra_file):
             print >>sys.stderr, "[warn]", extra_file, "is not exists."
         else:
             cnf_files += [extra_file]
+    cnf_files += ['~/.my.cnf']
+    cnf_files = map(os.path.expanduser, cnf_files)
 
     parser = NoValueConfigParser()
     parser.read(cnf_files)
