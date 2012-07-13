@@ -111,7 +111,7 @@ def build_option_parser():
     parser.add_option('-u', '--user')
     parser.add_option('-p', '--password')
     parser.add_option('-h', '--host')
-    parser.add_option('-?', '--help',action="store_true", help="show this message")
+    parser.add_option('-?', '--help', action="store_true", help="show this message")
     return parser
 
 
