@@ -51,7 +51,7 @@ def connect(cnf):
     args['passwd'] = cnf.get('password', '')
     args['charset'] = cnf.get('default-character-set', 'utf8')
     if 'port' in cnf:
-        args['port'] = int(get('port'))
+        args['port'] = int(cnf.get('port'))
     return MySQLdb.connect(**args)
 
 
