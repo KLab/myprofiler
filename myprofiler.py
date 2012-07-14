@@ -59,8 +59,9 @@ def processlist(con):
     cur = con.cursor(DictCursor)
     cur.execute(CMD_PROCESSLIST)
     for row in cur.fetchall():
-        if row['Info']:
-            yield row['Info']
+        query = row['Info']
+        if query and query != CMD_PROCESSLIST:
+            yield query
 
 
 def normalize_query(row):
@@ -132,12 +133,31 @@ def build_option_parser():
     return parser
 
 
-def show_summary(counter, limit, file=sys.stdout):
-    print >>file, '---'
+def show_summary(counter, limit=10, file=sys.stdout):
+    print >>file, '-'*20
     items = counter.items()
     items.sort(key=lambda x: x[1], reverse=True)
     for query, count in items[:limit]:
         print >>file, "%4d %s" % (count, query)
+    print >>file
+    file.flush()
+
+
+def profile(con, num_summary, interval=0.5, outfile=None):
+    counter = defaultdict(int)
+    try:
+        while True:
+            for query in processlist(con):
+                counter[normalize_query(query)] += 1
+                if outfile:
+                    print >>outfile, query
+            show_summary(counter, num_summary)
+            sleep(interval)
+    finally:
+        if outfile:
+            print >>outfile, "\nSummary"
+            show_summary(counter, num_summary, outfile)
+            outfile.close()
 
 
 def main():
@@ -164,24 +184,7 @@ def main():
     except Exception, e:
         parser.error(e)
 
-    counter = defaultdict(int)
-    try:
-        while True:
-            for row in processlist(con):
-                if row == CMD_PROCESSLIST:
-                    continue
-                counter[normalize_query(row)] += 1
-                if outfile:
-                    print >>outfile, row
-
-            show_summary(counter, opts.num_summary)
-            print
-            sleep(opts.interval)
-    finally:
-        if outfile:
-            print >>outfile, "\nSummary"
-            show_summary(counter, opts.num_summary, outfile)
-            outfile.close()
+    profile(con, opts.num_summary, opts.interval, outfile)
 
 
 if __name__ == '__main__':
