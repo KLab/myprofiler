@@ -41,6 +41,37 @@ class NoValueConfigParser(SafeConfigParser):
         )
 
 
+class SummingCollector(object):
+    def __init__(self):
+        self.sums = defaultdict(int)
+
+    def turn(self):
+        pass
+
+    def append(self, item):
+        self.sums[item] += 1
+
+    def summary(self):
+        items = self.sums.items()
+        items.sort(key=lambda x: x[1], reverse=True)
+        return items
+
+class CappedCollector(SummingCollector):
+    def __init__(self, cap):
+        self._queue = deque([{}] * cap)
+        SummingCollector.__init__(self)
+
+    def append(self, item):
+        self._queue[-1][item] += 1
+        SummingCollector.append(self, item)
+
+    def turn(self):
+        self._queue.append({})
+        dropped = self._queue.popleft()
+        for k, v in dropped.items():
+            self.sums[item] -= v
+
+
 CMD_PROCESSLIST = "show full processlist"
 
 
@@ -104,55 +135,60 @@ def read_mycnf(extra_file=None, group_suffix=''):
 
 def build_option_parser():
     parser = OptionParser(add_help_option=False)
-    parser.add_option(
-            '-o', '--out',
-            help="Write raw queries to this file.",
-            )
-    parser.add_option(
-            '-e', '--defaults-extra-file', dest='extra_file',
-            help="Read MySQL configuration from this file additionaly",
-            )
-    parser.add_option(
-            '-s', '--defaults-group-suffix', dest='group_suffix',
-            help="Read MySQL configuration from this section additionally",
-            )
-    parser.add_option(
-            '-n', '--num-summary', metavar="K",
-            help="show most K common queries. (default: 10)",
-            type="int", default=10
-            )
-    parser.add_option(
-            '-i', '--interval',
-            help="Interval of executing show processlist [sec] (default: 1.0)",
-            type="float", default=1.0
-            )
-    parser.add_option('-u', '--user')
-    parser.add_option('-p', '--password')
-    parser.add_option('-h', '--host')
-    parser.add_option('-?', '--help', action="store_true", help="show this message")
+    option = parser.add_option
+    option('-o', '--out',
+           help="Write raw queries to this file.",
+           )
+    option('-e', '--defaults-extra-file', dest='extra_file',
+           help="Read MySQL configuration from this file additionaly",
+           )
+    option('-s', '--defaults-group-suffix', dest='group_suffix',
+           help="Read MySQL configuration from this section additionally",
+           )
+    option('-n', '--num-summary', metavar="K",
+           help="show most K common queries. (default: %default)",
+           type="int", default=10
+           )
+    option('-l', '--limit', metavar="L",
+           help="Summarize most recent L results. "
+                "0 means all queries since start are summarized (default).",
+           type="int", default=0
+           )
+    option('-i', '--interval',
+           help="Interval of executing show processlist [sec] (default: %default)",
+           type="float", default=1.0
+           )
+    option('-u', '--user')
+    option('-p', '--password')
+    option('-h', '--host')
+    option('-?', '--help', action="store_true", help="show this message")
     return parser
 
 
-def show_summary(counter, limit=10, file=sys.stdout):
+def show_summary(collector, num_summary, file=sys.stdout):
     print >>file, '-'*20
-    items = counter.items()
-    items.sort(key=lambda x: x[1], reverse=True)
-    for query, count in items[:limit]:
+    summary = collector.summary()
+    for query, count in summary[:num_summary]:
         print >>file, "%4d %s" % (count, query)
     print >>file
     file.flush()
 
 
-def profile(con, num_summary, interval=0.5, outfile=None):
-    counter = defaultdict(int)
+def profile(con, num_summary, limit, interval=1.0, outfile=None):
+    if limit:
+        collector = CappedCollector(limit)
+    else:
+        collector = SummingCollector()
+
     try:
         while True:
             for query in processlist(con):
-                counter[normalize_query(query)] += 1
+                collector.append(normalize_query(query))
                 if outfile:
                     print >>outfile, query
-            show_summary(counter, num_summary)
+            show_summary(collector, num_summary)
             sleep(interval)
+            collector.turn()
     finally:
         if outfile:
             print >>outfile, "\nSummary"
