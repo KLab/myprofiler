@@ -220,7 +220,7 @@ def main():
     except Exception, e:
         parser.error(e)
 
-    profile(con, opts.num_summary, opts.interval, outfile)
+    profile(con, opts.num_summary, opts.limit, opts.interval, outfile)
 
 
 if __name__ == '__main__':
