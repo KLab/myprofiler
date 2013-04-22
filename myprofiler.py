@@ -10,7 +10,7 @@ import os
 import sys
 import re
 from time import sleep
-from collections import defaultdict
+from collections import defaultdict, deque
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser
 
@@ -52,13 +52,13 @@ class SummingCollector(object):
         self.sums[item] += 1
 
     def summary(self):
-        items = self.sums.items()
+        items = [(k, v) for k, v in self.sums.items() if v > 0]
         items.sort(key=lambda x: x[1], reverse=True)
         return items
 
 class CappedCollector(SummingCollector):
     def __init__(self, cap):
-        self._queue = deque([{}] * cap)
+        self._queue = deque([defaultdict(int) for _ in range(cap)])
         SummingCollector.__init__(self)
 
     def append(self, item):
@@ -66,10 +66,10 @@ class CappedCollector(SummingCollector):
         SummingCollector.append(self, item)
 
     def turn(self):
-        self._queue.append({})
+        self._queue.append(defaultdict(int))
         dropped = self._queue.popleft()
         for k, v in dropped.items():
-            self.sums[item] -= v
+            self.sums[k] -= v
 
 
 CMD_PROCESSLIST = "show full processlist"
