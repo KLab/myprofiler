@@ -127,9 +127,15 @@ def read_mycnf(extra_file=None, group_suffix=''):
     parser = NoValueConfigParser()
     parser.read(cnf_files)
 
-    cnf = dict(parser.items('client'))
+    try:
+        cnf = dict(parser.items('client'))
+    except Exception:
+        cnf = {}
     if group_suffix:
-        cnf.update(parser.items('client' + group_suffix))
+        try:
+            cnf.update(parser.items('client' + group_suffix))
+        except Exception:
+            pass
     return cnf
 
 
