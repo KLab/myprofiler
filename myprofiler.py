@@ -11,6 +11,7 @@ import sys
 import re
 from time import sleep
 from collections import defaultdict, deque
+import datetime
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser
 
@@ -172,7 +173,7 @@ def build_option_parser():
 
 
 def show_summary(collector, num_summary, file=sys.stdout):
-    print >>file, '-'*20
+    print >>file, '##', datetime.datetime.now()
     summary = collector.summary()
     for query, count in summary[:num_summary]:
         print >>file, "%4d %s" % (count, query)
