@@ -85,3 +85,9 @@ def test_profile_capped(monkeypatch):
     assert summaries[1] == [('foo', 3), ('bar', 2)]
     assert summaries[2] == [('bar', 2), ('baz', 1)]
 
+def test_normalize():
+    normalize = myprofiler.normalize_query
+    assert normalize("IN ('a', 'b', 'c')") == "IN (S, S, S)"
+    assert normalize("IN ('a', 'b', 'c', 'd', 'e')") == "IN (...S)"
+    assert normalize("IN (1, 2, 3)") == "IN (N, N, N)"
+    assert normalize("IN (1, 2, 3, 4, 5)") == "IN (...N)"
