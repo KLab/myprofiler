@@ -4,7 +4,14 @@
 """myprofiler - Casual MySQL Profiler
 
 https://github.com/KLab/myprofiler
+
+Requirements.
+
+    - Python >= 2.6
+    - MySQLdb or PyMySQL
 """
+
+from __future__ import print_function
 
 import os
 import sys
@@ -12,8 +19,12 @@ import re
 from time import sleep
 from collections import defaultdict, deque
 import datetime
-from ConfigParser import SafeConfigParser
 from optparse import OptionParser
+
+try:
+    from ConfigParser import SafeConfigParser
+except ImportError:
+    from configparser import SafeConfigParser
 
 try:
     import MySQLdb  # MySQL-python
@@ -23,8 +34,7 @@ except ImportError:
         import pymysql as MySQLdb  # PyMySQL
         from pymysql.cursors import DictCursor
     except ImportError:
-        print "Please install MySQLdb or PyMySQL"
-        sys.exit(1)
+        sys.exit("MySQLdb or PyMySQL is required")
 
 
 class NoValueConfigParser(SafeConfigParser):
@@ -110,7 +120,7 @@ def normalize_query(row):
             (r'"[^"]+"', 'S'),
             (r'(([NS]\s*,\s*){4,})', r'...'),
             ]
-    for pat,sub in subs:
+    for pat, sub in subs:
         row = re.sub(pat, sub, row)
     return row
 
@@ -119,7 +129,7 @@ def read_mycnf(extra_file=None, group_suffix=''):
     cnf_files = ['/etc/my.cnf']
     if extra_file is not None:
         if not os.path.isfile(extra_file):
-            print >>sys.stderr, "[warn]", extra_file, "is not exists."
+            print("[warn]", extra_file, "is not exists.", file=sys.stderr)
         else:
             cnf_files += [extra_file]
     cnf_files += ['~/.my.cnf']
@@ -173,11 +183,10 @@ def build_option_parser():
 
 
 def show_summary(collector, num_summary, file=sys.stdout):
-    print >>file, '##', datetime.datetime.now()
-    summary = collector.summary()
-    for query, count in summary[:num_summary]:
-        print >>file, "%4d %s" % (count, query)
-    print >>file
+    print('##', datetime.datetime.now(), file=file)
+    for query, count in collector.summary()[:num_summary]:
+        print("%4d %s" % (count, query), file=file)
+    print(file=file)
     file.flush()
 
 
@@ -192,13 +201,13 @@ def profile(con, num_summary, limit, interval=1.0, outfile=None):
             for query in processlist(con):
                 collector.append(normalize_query(query))
                 if outfile:
-                    print >>outfile, query
+                    print(query, file=outfile)
             show_summary(collector, num_summary)
             sleep(interval)
             collector.turn()
     finally:
         if outfile:
-            print >>outfile, "\nSummary"
+            print("\nSummary", file=outfile)
             show_summary(counter, num_summary, outfile)
             outfile.close()
 
@@ -224,10 +233,10 @@ def main():
 
         if opts.out:
             outfile = open(opts.out, "w")
-    except Exception, e:
+    except Exception as e:
         parser.error(e)
-
-    profile(con, opts.num_summary, opts.limit, opts.interval, outfile)
+    else:
+        profile(con, opts.num_summary, opts.limit, opts.interval, outfile)
 
 
 if __name__ == '__main__':

@@ -46,7 +46,7 @@ class DummyProcesslist(object):
         self.iter = iter(self.querylist)
 
     def __call__(self, con):
-        return self.iter.next()
+        return next(self.iter)
 
 
 def test_profile(monkeypatch):
