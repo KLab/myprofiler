@@ -28,6 +28,10 @@ type NormalizePattern struct {
 	subs string
 }
 
+func (p *NormalizePattern) Normalize(q string) string {
+	return p.re.ReplaceAllString(q, p.subs)
+}
+
 var (
 	normalizePatterns []NormalizePattern = []NormalizePattern{
 		NormalizePattern{regexp.MustCompile(`[+\-]{0,1}\b\d+\b`), "N"},
@@ -67,7 +71,7 @@ func normalizeQuery(query string) string {
 	parts := strings.Split(query, " ")
 	query = strings.Join(parts, " ")
 	for _, pat := range normalizePatterns {
-		query = pat.re.ReplaceAllString(query, pat.subs)
+		query = pat.Normalize(query)
 	}
 	return query
 }
