@@ -16,10 +16,11 @@ import (
 )
 
 type Config struct {
-	dump       io.Writer
-	numSummary int
-	limit      int
-	interval   float64
+	dump     io.Writer
+	topN     int
+	rotate   int
+	interval float64
+	delay    int
 }
 
 type NormalizePattern struct {
@@ -132,12 +133,12 @@ func (s *summarizer) Show(out io.Writer, num int) {
 }
 
 type rotateSummarizer struct {
-	Limit   int
+	rotate  int
 	queries [][]string
 }
 
 func (s *rotateSummarizer) Update(queries []string) {
-	if len(s.queries) >= s.Limit {
+	if len(s.queries) >= s.rotate {
 		s.queries = s.queries[1:]
 	}
 	s.queries = append(s.queries, queries)
@@ -155,13 +156,14 @@ func (s *rotateSummarizer) Show(out io.Writer, num int) {
 
 func NewSummarizer(rotate int) Summarizer {
 	if rotate > 0 {
-		return &rotateSummarizer{Limit: rotate}
+		return &rotateSummarizer{rotate: rotate}
 	}
 	return &summarizer{make(map[string]int64)}
 }
 
 func profile(db *sql.DB, cfg *Config) {
-	summ := NewSummarizer(cfg.limit)
+	summ := NewSummarizer(cfg.rotate)
+	cnt := 0
 	for {
 		queries := processList(db)
 		if cfg.dump != nil {
@@ -176,8 +178,13 @@ func profile(db *sql.DB, cfg *Config) {
 		}
 		summ.Update(queries)
 
-		fmt.Println("## ", time.Now().Local().Format("2006-01-02 15:04:05.00 -0700"))
-		summ.Show(os.Stdout, cfg.numSummary)
+		cnt++
+		if cnt >= cfg.delay {
+			cnt = 0
+			fmt.Println("## ", time.Now().Local().Format("2006-01-02 15:04:05.00 -0700"))
+			summ.Show(os.Stdout, cfg.topN)
+		}
+
 		time.Sleep(time.Duration(float64(time.Second) * cfg.interval))
 	}
 }
@@ -197,10 +204,14 @@ func main() {
 	flag.StringVar(&dbuser, "user", dbuser, "User")
 	flag.StringVar(&password, "password", "", "Password")
 	flag.IntVar(&port, "port", 3306, "Port")
+
 	flag.StringVar(&dumpfile, "dump", "", "Write raw queries to this file")
-	flag.IntVar(&cfg.numSummary, "summary", 10, "How most common queries are shown")
-	flag.IntVar(&cfg.limit, "limit", 0, "Limit how many recent samples are summarized")
-	flag.Float64Var(&cfg.interval, "interval", 1.0, "(float) Interval of executing show processlist")
+
+	flag.IntVar(&cfg.topN, "top", 10, "(int) Show N most common queries")
+	flag.IntVar(&cfg.rotate, "rotate", 0, "(int) Last N samples are summarized. 0 means summarize all samples")
+	flag.Float64Var(&cfg.interval, "interval", 1.0, "(float) Sampling interval")
+	flag.IntVar(&cfg.delay, "delay", 1, "(int) Show summary for each `delay` samples. -interval=0.1 -delay=30 shows summary for every 3sec")
+
 	flag.Parse()
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/", dbuser, password, host, port)

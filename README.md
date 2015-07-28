@@ -17,15 +17,15 @@ mv myprofiler ~/bin
 ## Options
 
 ```console
-$ ./myprofiler -h
 Usage of ./myprofiler:
+  -delay=1: (int) Show summary for each `delay` samples. -interval=0.1 -delay=30 shows summary for every 3sec
   -dump="": Write raw queries to this file
   -host="localhost": Host of database
-  -interval=1: (float) Interval of executing show processlist
-  -limit=0: Limit how many recent samples are summarized
+  -interval=1: (float) Sampling interval
   -password="": Password
   -port=3306: Port
-  -summary=10: How most common queries are shown
+  -rotate=0: (int) Last N samples are summarized. 0 means summarize all samples
+  -top=10: (int) Show N most common queries
   -user="": User
 ```
 
@@ -33,21 +33,21 @@ Usage of ./myprofiler:
 ## Profiling
 
 ```console
-myprofiler -host=db1234 -user=dbuser -password=dbpass -interval=0.2 -summary=30
+myprofiler -host=db1234 -user=dbuser -password=dbpass -interval=0.2 -delay=10 -top=30
 ```
 
 You should use user having 'PROCESS' privilege, or same user to your app.
 See [document](https://dev.mysql.com/doc/refman/5.6/en/show-processlist.html) for
 "SHOW FULL PROCESSLIST".
 
+myprofiler transform query like mysqldumpslow. For example, "SELECT * FROM user WHERE id=42"
+is transformed into "SELECT * FROM user WHERE id=N".
+myprofiler counts transformed quries and show top N (specified by `-top`) queries.
+
 myprofiler sleeps seconds specified by `-interval` for each sample.
 0.2 (up to 5 queries/sec) may be low enough for your production DB.
 
-myprofiler transform query like mysqldumpslow. For example, "SELECT * FROM user WHERE id=42"
-is transformed into "SELECT * FROM user WHERE id=N".
-myprofiler counts transformed quries and show top N (specified by `-summary`) queries.
-
-You can get raw query by `-dump=query.txt` option. It is useful when you want to EXPLAIN
+You can get raw query by `-dump=rawquery.txt` option. It is useful when you want to EXPLAIN
 heavy queries.
 
 
@@ -57,8 +57,8 @@ You can use log rotation tool like rotatelogs or multilog.
 
 
 ```console
-myprofiler -host=db1234 -user=dbuser -password=dbpass -limit=60 | rotatelogs logs/myprofiler.%Y%m%d 86400
+myprofiler -host=db1234 -user=dbuser -password=dbpass -rotate=60 -delay=30 | rotatelogs logs/myprofiler.%Y%m%d 86400
 ```
 
-`-limit=60` means myprofiler only count last 60 samples.
-Since interval is 1sec (default), this command shows top queries in last minute.
+`-rotate=60` means myprofiler only summarize last 60 samples.
+Since interval is 1 sec by default, this command shows top queries in minute.
