@@ -52,16 +52,20 @@ func processList(db *sql.DB) []string {
 		log.Println(err)
 		return queries
 	}
+	defer rows.Close()
 
 	for rows.Next() {
-		var user, host, db, command, state, info string
+		var user, host, db, command, state, info *string
 		var id, time int
-		rows.Scan(&id, &user, &host, &db, &command, &time, &state, &info)
-		if info != "" && info != procList {
-			queries = append(queries, info)
+		err := rows.Scan(&id, &user, &host, &db, &command, &time, &state, &info)
+		if err != nil {
+			log.Print(err)
+			continue
+		}
+		if info != nil && *info != "" && *info != procList {
+			queries = append(queries, *info)
 		}
 	}
-	rows.Close()
 	return queries
 }
 
@@ -90,24 +94,74 @@ func (pl pairList) Swap(i, j int) {
 	pl[i], pl[j] = pl[j], pl[i]
 }
 
-func showSummary(sum map[string]int64, n int) {
+type Summarizer interface {
+	Update(queries []string)
+	Show(out io.Writer, num int)
+}
+
+func showSummary(w io.Writer, sum map[string]int64, n int) {
 	counts := make([]pair, 0, len(sum))
 	for q, c := range sum {
 		counts = append(counts, pair{q, c})
 	}
 	sort.Sort(pairList(counts))
 
-	fmt.Println("## ", time.Now().Local())
 	for i, p := range counts {
 		if i >= n {
 			break
 		}
-		fmt.Printf("%4d %s\n", p.c, p.q)
+		fmt.Fprintf(w, "%4d %s\n", p.c, p.q)
 	}
 }
 
+type summarizer struct {
+	counts map[string]int64
+}
+
+func (s *summarizer) Update(queries []string) {
+	if s.counts == nil {
+		s.counts = make(map[string]int64)
+	}
+	for _, q := range queries {
+		s.counts[q]++
+	}
+}
+
+func (s *summarizer) Show(out io.Writer, num int) {
+	showSummary(out, s.counts, num)
+}
+
+type rotateSummarizer struct {
+	Limit   int
+	queries [][]string
+}
+
+func (s *rotateSummarizer) Update(queries []string) {
+	if len(s.queries) >= s.Limit {
+		s.queries = s.queries[1:]
+	}
+	s.queries = append(s.queries, queries)
+}
+
+func (s *rotateSummarizer) Show(out io.Writer, num int) {
+	counts := make(map[string]int64)
+	for _, qs := range s.queries {
+		for _, q := range qs {
+			counts[q]++
+		}
+	}
+	showSummary(out, counts, num)
+}
+
+func NewSummarizer(rotate int) Summarizer {
+	if rotate > 0 {
+		return &rotateSummarizer{Limit: rotate}
+	}
+	return &summarizer{make(map[string]int64)}
+}
+
 func profile(db *sql.DB, cfg *Config) {
-	count := make(map[string]int64)
+	summ := NewSummarizer(cfg.limit)
 	for {
 		queries := processList(db)
 		if cfg.dump != nil {
@@ -116,10 +170,14 @@ func profile(db *sql.DB, cfg *Config) {
 				cfg.dump.Write([]byte{'\n'})
 			}
 		}
-		for _, q := range queries {
-			count[normalizeQuery(q)]++
+
+		for i, q := range queries {
+			queries[i] = normalizeQuery(q)
 		}
-		showSummary(count, cfg.numSummary)
+		summ.Update(queries)
+
+		fmt.Println("## ", time.Now().Local().Format("2006-01-02 15:04:05.00 -0700"))
+		summ.Show(os.Stdout, cfg.numSummary)
 		time.Sleep(time.Duration(float64(time.Second) * cfg.interval))
 	}
 }
