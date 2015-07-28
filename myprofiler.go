@@ -10,7 +10,6 @@ import (
 	"os/user"
 	"regexp"
 	"sort"
-	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -32,17 +31,16 @@ func (p *NormalizePattern) Normalize(q string) string {
 	return p.re.ReplaceAllString(q, p.subs)
 }
 
-var (
-	normalizePatterns []NormalizePattern = []NormalizePattern{
-		NormalizePattern{regexp.MustCompile(`[+\-]{0,1}\b\d+\b`), "N"},
-		NormalizePattern{regexp.MustCompile(`\b0x[0-9A-Fa-f]+\b`), "0xN"},
-		NormalizePattern{regexp.MustCompile(`(\\')`), ""},
-		NormalizePattern{regexp.MustCompile(`(\\")`), ""},
-		NormalizePattern{regexp.MustCompile(`'[^']+'`), "S"},
-		NormalizePattern{regexp.MustCompile(`"[^"]+"`), "S"},
-		NormalizePattern{regexp.MustCompile(`(([NS]\s*,\s*){4,})`), "..."},
-	}
-)
+var normalizePatterns = []NormalizePattern{
+	NormalizePattern{regexp.MustCompile(` +`), " "},
+	NormalizePattern{regexp.MustCompile(`[+\-]{0,1}\b\d+\b`), "N"},
+	NormalizePattern{regexp.MustCompile(`\b0x[0-9A-Fa-f]+\b`), "0xN"},
+	NormalizePattern{regexp.MustCompile(`(\\')`), ""},
+	NormalizePattern{regexp.MustCompile(`(\\")`), ""},
+	NormalizePattern{regexp.MustCompile(`'[^']+'`), "S"},
+	NormalizePattern{regexp.MustCompile(`"[^"]+"`), "S"},
+	NormalizePattern{regexp.MustCompile(`(([NS]\s*,\s*){4,})`), "..."},
+}
 
 func processList(db *sql.DB) []string {
 	procList := "SHOW FULL PROCESSLIST"
@@ -68,8 +66,6 @@ func processList(db *sql.DB) []string {
 }
 
 func normalizeQuery(query string) string {
-	parts := strings.Split(query, " ")
-	query = strings.Join(parts, " ")
 	for _, pat := range normalizePatterns {
 		query = pat.Normalize(query)
 	}
@@ -95,7 +91,7 @@ func (pl pairList) Swap(i, j int) {
 }
 
 func showSummary(sum map[string]int64, n int) {
-	counts := []pair{}
+	counts := make([]pair, 0, len(sum))
 	for q, c := range sum {
 		counts = append(counts, pair{q, c})
 	}
@@ -114,9 +110,14 @@ func profile(db *sql.DB, cfg *Config) {
 	count := make(map[string]int64)
 	for {
 		queries := processList(db)
+		if cfg.dump != nil {
+			for _, q := range queries {
+				cfg.dump.Write([]byte(q))
+				cfg.dump.Write([]byte{'\n'})
+			}
+		}
 		for _, q := range queries {
-			q = normalizeQuery(q)
-			count[q]++
+			count[normalizeQuery(q)]++
 		}
 		showSummary(count, cfg.numSummary)
 		time.Sleep(time.Duration(float64(time.Second) * cfg.interval))
