@@ -193,14 +193,14 @@ func main() {
 		dbuser = currentUser.Name
 	}
 	cfg := Config{}
-	flag.StringVar(&host, "host", "localhost", "Host of database. or Unix socket path")
-	flag.StringVar(&dbuser, "user", dbuser, "user")
+	flag.StringVar(&host, "host", "localhost", "Host of database")
+	flag.StringVar(&dbuser, "user", dbuser, "User")
 	flag.StringVar(&password, "password", "", "Password")
-	flag.IntVar(&port, "port", 3306, "port")
+	flag.IntVar(&port, "port", 3306, "Port")
 	flag.StringVar(&dumpfile, "dump", "", "Write raw queries to this file")
-	flag.IntVar(&cfg.numSummary, "summary", 10, "How many most common queries.")
-	flag.IntVar(&cfg.limit, "limit", 0, "Limit how many recent queries are summarised.")
-	flag.Float64Var(&cfg.interval, "interval", 1.0, "Interval of executing show processlist")
+	flag.IntVar(&cfg.numSummary, "summary", 10, "How most common queries are shown")
+	flag.IntVar(&cfg.limit, "limit", 0, "Limit how many recent samples are summarised")
+	flag.Float64Var(&cfg.interval, "interval", 1.0, "(float) Interval of executing show processlist")
 	flag.Parse()
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/", dbuser, password, host, port)
