@@ -199,7 +199,7 @@ func main() {
 	flag.IntVar(&port, "port", 3306, "Port")
 	flag.StringVar(&dumpfile, "dump", "", "Write raw queries to this file")
 	flag.IntVar(&cfg.numSummary, "summary", 10, "How most common queries are shown")
-	flag.IntVar(&cfg.limit, "limit", 0, "Limit how many recent samples are summarised")
+	flag.IntVar(&cfg.limit, "limit", 0, "Limit how many recent samples are summarized")
 	flag.Float64Var(&cfg.interval, "interval", 1.0, "(float) Interval of executing show processlist")
 	flag.Parse()
 
