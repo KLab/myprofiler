@@ -18,7 +18,7 @@ import (
 type Config struct {
 	dump     io.Writer
 	topN     int
-	rotate   int
+	last     int
 	interval float64
 	delay    int
 }
@@ -132,19 +132,19 @@ func (s *summarizer) Show(out io.Writer, num int) {
 	showSummary(out, s.counts, num)
 }
 
-type rotateSummarizer struct {
-	rotate  int
+type recentSummarizer struct {
+	last    int
 	queries [][]string
 }
 
-func (s *rotateSummarizer) Update(queries []string) {
-	if len(s.queries) >= s.rotate {
+func (s *recentSummarizer) Update(queries []string) {
+	if len(s.queries) >= s.last {
 		s.queries = s.queries[1:]
 	}
 	s.queries = append(s.queries, queries)
 }
 
-func (s *rotateSummarizer) Show(out io.Writer, num int) {
+func (s *recentSummarizer) Show(out io.Writer, num int) {
 	counts := make(map[string]int64)
 	for _, qs := range s.queries {
 		for _, q := range qs {
@@ -154,15 +154,15 @@ func (s *rotateSummarizer) Show(out io.Writer, num int) {
 	showSummary(out, counts, num)
 }
 
-func NewSummarizer(rotate int) Summarizer {
-	if rotate > 0 {
-		return &rotateSummarizer{rotate: rotate}
+func NewSummarizer(last int) Summarizer {
+	if last > 0 {
+		return &recentSummarizer{last: last}
 	}
 	return &summarizer{make(map[string]int64)}
 }
 
 func profile(db *sql.DB, cfg *Config) {
-	summ := NewSummarizer(cfg.rotate)
+	summ := NewSummarizer(cfg.last)
 	cnt := 0
 	for {
 		queries := processList(db)
@@ -208,7 +208,7 @@ func main() {
 	flag.StringVar(&dumpfile, "dump", "", "Write raw queries to this file")
 
 	flag.IntVar(&cfg.topN, "top", 10, "(int) Show N most common queries")
-	flag.IntVar(&cfg.rotate, "rotate", 0, "(int) Last N samples are summarized. 0 means summarize all samples")
+	flag.IntVar(&cfg.last, "last", 0, "(int) Last N samples are summarized. 0 means summarize all samples")
 	flag.Float64Var(&cfg.interval, "interval", 1.0, "(float) Sampling interval")
 	flag.IntVar(&cfg.delay, "delay", 1, "(int) Show summary for each `delay` samples. -interval=0.1 -delay=30 shows summary for every 3sec")
 

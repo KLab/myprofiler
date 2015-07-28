@@ -24,7 +24,7 @@ Usage of ./myprofiler:
   -interval=1: (float) Sampling interval
   -password="": Password
   -port=3306: Port
-  -rotate=0: (int) Last N samples are summarized. 0 means summarize all samples
+  -last=0: (int) Last N samples are summarized. 0 means summarize all samples
   -top=10: (int) Show N most common queries
   -user="": User
 ```
@@ -57,8 +57,8 @@ You can use log rotation tool like rotatelogs or multilog.
 
 
 ```console
-myprofiler -host=db1234 -user=dbuser -password=dbpass -rotate=60 -delay=30 | rotatelogs logs/myprofiler.%Y%m%d 86400
+myprofiler -host=db1234 -user=dbuser -password=dbpass -last=60 -delay=30 | rotatelogs logs/myprofiler.%Y%m%d 86400
 ```
 
-`-rotate=60` means myprofiler only summarize last 60 samples.
+`-last=60` means myprofiler only summarize last 60 samples.
 Since interval is 1 sec by default, this command shows top queries in minute.
