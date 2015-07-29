@@ -1,3 +1,6 @@
+build:
+	go build myprofiler.go
+
 release:
 	GOOS=linux go build myprofiler.go
 	tar cvzf myprofiler.linux_amd64.tar.gz myprofiler

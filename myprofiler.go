@@ -77,11 +77,11 @@ func normalizeQuery(query string) string {
 	return query
 }
 
-type pair struct {
+type queryCount struct {
 	q string
 	c int64
 }
-type pairList []pair
+type pairList []queryCount
 
 func (pl pairList) Len() int {
 	return len(pl)
@@ -101,9 +101,9 @@ type Summarizer interface {
 }
 
 func showSummary(w io.Writer, sum map[string]int64, n int) {
-	counts := make([]pair, 0, len(sum))
+	counts := make([]queryCount, 0, len(sum))
 	for q, c := range sum {
-		counts = append(counts, pair{q, c})
+		counts = append(counts, queryCount{q, c})
 	}
 	sort.Sort(pairList(counts))
 
@@ -133,25 +133,34 @@ func (s *summarizer) Show(out io.Writer, num int) {
 }
 
 type recentSummarizer struct {
-	last    int
-	queries [][]string
+	last   int
+	counts [][]queryCount
 }
 
 func (s *recentSummarizer) Update(queries []string) {
-	if len(s.queries) >= s.last {
-		s.queries = s.queries[1:]
+	if len(s.counts) >= s.last {
+		s.counts = s.counts[1:]
 	}
-	s.queries = append(s.queries, queries)
+	sort.Strings(queries)
+	qc := make([]queryCount, 0, 16)
+	for _, q := range queries {
+		if len(qc) > 0 && qc[len(qc)-1].q == q {
+			qc[len(qc)-1].c++
+		} else {
+			qc = append(qc, queryCount{q: q, c: 1})
+		}
+	}
+	s.counts = append(s.counts, qc)
 }
 
 func (s *recentSummarizer) Show(out io.Writer, num int) {
-	counts := make(map[string]int64)
-	for _, qs := range s.queries {
-		for _, q := range qs {
-			counts[q]++
+	sum := make(map[string]int64)
+	for _, qcs := range s.counts {
+		for _, qc := range qcs {
+			sum[qc.q] += qc.c
 		}
 	}
-	showSummary(out, counts, num)
+	showSummary(out, sum, num)
 }
 
 func NewSummarizer(last int) Summarizer {
