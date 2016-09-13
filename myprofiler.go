@@ -55,10 +55,23 @@ func processList(db *sql.DB) []string {
 	}
 	defer rows.Close()
 
+	cs, err := rows.Columns()
+	if err != nil {
+		panic(err)
+	}
+	lcs := len(cs)
+	if lcs != 8 && lcs != 9 {
+		log.Fatal("Unknwon columns: ", cs)
+	}
 	for rows.Next() {
 		var user, host, db, command, state, info *string
 		var id, time int
-		err := rows.Scan(&id, &user, &host, &db, &command, &time, &state, &info)
+		if lcs == 8 {
+			err = rows.Scan(&id, &user, &host, &db, &command, &time, &state, &info)
+		} else {
+			var progress interface{}
+			err = rows.Scan(&id, &user, &host, &db, &command, &time, &state, &info, &progress)
+		}
 		if err != nil {
 			log.Print(err)
 			continue
