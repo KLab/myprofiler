@@ -9,7 +9,7 @@ myprofiler は MySQL のサンプリングプロファイラです。
 tarball をダウンロードして展開し、実行ファイルを PATH が通ったディレクトリに配置します。
 
 ```console
-wget https://github.com/KLab/myprofiler/releases/download/0.1/myprofiler.linux_amd64.tar.gz
+wget https://github.com/KLab/myprofiler/releases/download/0.2/myprofiler.linux_amd64.tar.gz
 tar xf myprofiler.linux_amd64.tar.gz
 mv myprofiler ~/bin
 ```
